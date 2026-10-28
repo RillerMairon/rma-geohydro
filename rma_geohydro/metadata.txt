@@ -1,0 +1,14 @@
+[general]
+name=RMA GeoHydro
+qgisMinimumVersion=3.28
+qgisMaximumVersion=3.99
+description=Diagnostico e preparacao assistida de drenagem de macicos com base em arquivos DXF.
+about=Plugin independente para importar entidades lineares de DXF, classificá-las como divisores topograficos, canais ou descidas, diagnosticar conexoes e gerar camadas vetoriais. A polygonizacao opcional utiliza apenas limites efetivamente fechados.
+version=0.1.0
+author=RMA
+email=
+category=Vector
+icon=icon.svg
+experimental=True
+homepage=
+tags=DXF,drenagem,macicos,hidrologia,CAD,engenharia
