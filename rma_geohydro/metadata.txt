@@ -4,7 +4,7 @@ qgisMinimumVersion=3.28
 qgisMaximumVersion=3.99
 description=Assisted CAD/DXF processing and preliminary drainage sector generation for mining and geotechnical engineering.
 about=RMA GeoHydro imports CAD/DXF geometry, classifies drainage features and creates preliminary drainage sectors between channel centerlines and transverse dividers or downchutes. Canal and transverse CAD layers are selected interactively. The plugin also exports vector files and reports geometric gaps. Experimental software: preliminary sectors are not hydrologically validated catchments and must be checked before engineering use.
-version=0.2.3
+version=0.2.4
 author=Riller Mairon de Oliveira Alves
 email=rillermairongod@gmail.com
 category=Vector
@@ -15,4 +15,4 @@ homepage=https://github.com/RillerMairon/rma-geohydro
 repository=https://github.com/RillerMairon/rma-geohydro
 tracker=https://github.com/RillerMairon/rma-geohydro/issues
 tags=hydrology,drainage,mining,geotechnical engineering,DXF,CAD,topography,geoprocessing
-changelog=Version 0.2.3 - Added integer alerta_geom flag (0=without automatic warnings, 1=gap/offset warning), computed from the status field after geometry generation; no changes to sector geometry or export. Previous changes: Version 0.2.2 - Added assisted sector-generation workflow based on the recovered universal QGIS script. Optional SHP export of temporary sectors. Added revised preliminary sector construction using the previously tested transverse-to-channel method. Preserved CAD line export. Corrected optional DESCIDA selection default; added confirmation of DIVISOR and DESCIDA counts and mixed-orientation selection.
+changelog=Version 0.2.4 - Fixed Flake8 E731 in setores.py (replaced assigned lambda with equivalent named function); retained sector geometry and alerta_geom from v0.2.3. Previous: Version 0.2.3 - Added integer alerta_geom flag (0=without automatic warnings, 1=gap/offset warning), computed from the status field after geometry generation; no changes to sector geometry or export. Previous changes: Version 0.2.2 - Added assisted sector-generation workflow based on the recovered universal QGIS script. Optional SHP export of temporary sectors. Added revised preliminary sector construction using the previously tested transverse-to-channel method. Preserved CAD line export. Corrected optional DESCIDA selection default; added confirmation of DIVISOR and DESCIDA counts and mixed-orientation selection.

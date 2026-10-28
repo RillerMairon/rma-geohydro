@@ -310,7 +310,8 @@ def executar():
     if not crs.isValid() or crs.mapUnits() != QgsUnitTypes.DistanceMeters:
         raise RuntimeError("Escolha um SRC válido com unidades em metros. Nada foi alterado.")
 
-    filtrar = lambda layer: [e for e in itens if e["layer"] == layer] if layer else []
+    def filtrar(layer):
+        return [e for e in itens if e["layer"] == layer] if layer else []
     canais = filtrar(nome_canal)
     transversais = filtrar(nome_div) + filtrar(nome_desc)
     # Quando o usuario seleciona a mesma camada para duas categorias,

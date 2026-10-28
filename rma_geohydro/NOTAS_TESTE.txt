@@ -1,4 +1,4 @@
-RMA GeoHydro v0.2.2 experimental. Correção: DESCIDA não inicia como Nenhuma; confirmação de camadas e contagens; opção Ambas/Longitudinal/Transversal. O modo informa a configuração, e a geometria segue o canal de referência e suas transversais; NÃO há classificação hidráulica automática. Setores são aproximações sujeitas a revisão. Testar no QGIS antes de publicar.
-
-
-VERSAO 0.2.3 - Campo alerta_geom (inteiro): 0 quando status=PRELIMINAR; 1 quando existe alerta de lacuna ou afastamento. Esse campo nao valida hidrologicamente os setores. A geometria e a rotina de exportacao sao as mesmas da v0.2.2.
+RMA GeoHydro v0.2.4 - Experimental
+Fixed Flake8 E731 in setores.py line 313.
+The filter function logic is unchanged; geometry and alerta_geom processing preserved.
+Retest with QGIS before submitting to official repository.
