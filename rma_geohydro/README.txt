@@ -1,35 +1,27 @@
-RMA GeoHydro — v0.1.0 (experimental)
-Autor: RMA | Plugin independente, sem vinculacao empresarial.
+RMA GeoHydro 0.2.0 - EXPERIMENTAL
+Author: Riller Mairon de Oliveira Alves
+License: GPL-3.0
 
-INSTALACAO
-QGIS > Complementos > Gerenciar e instalar complementos > Instalar a partir de ZIP.
-Selecione RMA_GeoHydro_v0.1.0.zip. Ative o plugin e clique no icone RMA.
+INSTALL: QGIS > Plugins > Manage and Install Plugins > Install from ZIP.
+The ZIP root must contain the folder rma_geohydro.
 
-COMO USAR
-1. Abra o plugin e selecione um DXF.
-2. Escolha a subcamada e confira o campo que indica o layer CAD de cada entidade.
-3. Informe o EPSG original do CAD. Nunca atribua um EPSG arbitrario.
-4. Ajuste as palavras-chave para divisores, canais e descidas, conforme os nomes de layers do seu DXF.
-5. Informe o tipo de canal longitudinal/transversal e a tolerancia de conexao (metros).
-6. Escolha pasta e formato de saida, opcionalmente ative a polygonizacao.
-7. Clique Analisar e exportar e confira o diagnostico TXT.
+TWO ACTIONS IN THE DIALOG:
+1. GERAR SETORES DE DRENAGEM (assistido): runs the recovered universal workflow.
+   Select DXF, channel, dividers, optional downchutes, optional flow arrows,
+   and optional external boundary. Enter a metric projected EPSG.
+   Preliminary areas are added as TEMPORARY QGIS layers for visual inspection.
+   Optionally export the temporary result to SHP after processing.
+2. Classificar linhas e exportar: retains v0.1 layer classification and
+   export functionality, with optional CLOSED-RING polygonization.
 
-REQUISITOS
-QGIS 3.28+ com PyQt5 e GDAL/OGR (normalmente inclusos no QGIS).
-Arquivos DXF com entidades geometricas lineares e campo de layer CAD disponivel.
+WARNING: Sector polygon geometry is a preliminary geometric approximation.
+Lines spanning gaps may be interpolated; verify all gaps and boundaries.
+The longitudinal/transverse setting in the v0.1 classifier still only
+records orientation and is not a hydraulic computation.
+No fixed coordinate, source DXF name, or CAD layer name is required.
+Check the resulting sectors against the original CAD and engineering data.
+Always work on copies, never on production source data.
+This plugin has been checked for Python syntax but has NOT been
+run or validated here in a QGIS desktop application.
 
-LIMITACOES IMPORTANTES
-- Nao desenha automaticamente um sistema completo de drenagem e NAO dimensiona canais.
-- Classifica linhas por nomes de layers CAD e NAO por interpretacao visual/topografica.
-- A escolha longitudinal/transversal e registrada no diagnostico, mas nao modifica a geometria.
-- A polygonizacao so produz superficies quando os segmentos delimitam aneis fechados.
-- Nao faz snapping automatico nem corrige lacunas ou linhas que cruzam sem nos.
-- Somente considera extremidades de linhas no diagnostico aproximado de conexoes.
-- Sem MDE ou cotas confiaveis, nao estima sentido de fluxo ou declividade.
-- O formato SHP limita tamanho de nomes de campo e nao preserva todos os tipos.
-- Execute primeiro em COPIA do DXF e em pasta nova, pois arquivos de saida com os mesmos nomes sao sobrescritos.
-- Teste primeiro em amostra pequena; nao houve teste de interface dentro de uma instalacao real do QGIS neste ambiente.
-
-Este e um prototipo funcional de classificacao e diagnostico. A automatizacao
-geometrica especializada do script anterior devera ser portada e testada como
-uma proxima versao apos conferencia das regras e geometrias originais.
+VERSÃO 0.2.2: modo Ambas e seleção de DESCIDA corrigida. Valide a quantidade de DIVISOR e DESCIDA na tela de confirmação. A orientação declarada não comprova classificação hidráulica; o traçado é construído a partir das camadas escolhidas.

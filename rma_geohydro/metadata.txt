@@ -2,37 +2,17 @@
 name=RMA GeoHydro
 qgisMinimumVersion=3.28
 qgisMaximumVersion=3.99
-
-description=Assisted CAD/DXF processing and preliminary geometric validation of surface drainage systems for mining and geotechnical engineering.
-
-about=RMA GeoHydro is an open-source QGIS plugin developed by Riller Mairon de Oliveira Alves.
-    The plugin supports assisted processing and classification of CAD/DXF linear features, including topographic divides, drainage channels, and downchutes.
-    Its initial features include preliminary geometric validation, connectivity diagnostics, vector data export, and optional polygon generation from closed boundaries.
-    The plugin is primarily intended for surface drainage applications involving mining embankments, waste rock dumps, and geotechnical structures.
-    RMA GeoHydro aims to improve geospatial data organization and support technical engineering workflows.
-    Version 0.1.0 is an experimental release intended for testing and continuous improvement.
-    The plugin does not perform hydraulic sizing or fully automated drainage network design.
-
-version=0.1.0
+description=Assisted CAD/DXF processing and preliminary drainage sector generation for mining and geotechnical engineering.
+about=RMA GeoHydro imports CAD/DXF geometry, classifies drainage features and creates preliminary drainage sectors between channel centerlines and transverse dividers or downchutes. Canal and transverse CAD layers are selected interactively. The plugin also exports vector files and reports geometric gaps. Experimental software: preliminary sectors are not hydrologically validated catchments and must be checked before engineering use.
+version=0.2.3
 author=Riller Mairon de Oliveira Alves
 email=rillermairongod@gmail.com
-
 category=Vector
 icon=icon.svg
 experimental=True
 deprecated=False
-
 homepage=https://github.com/RillerMairon/rma-geohydro
 repository=https://github.com/RillerMairon/rma-geohydro
 tracker=https://github.com/RillerMairon/rma-geohydro/issues
-
-tags=hydrology,drainage,mining,geotechnical engineering,DXF,CAD,topography,geoprocessing,surface drainage
-
-changelog=Version 0.1.0 - Initial experimental release.
-    Added assisted CAD/DXF line classification.
-    Added preliminary geometric validation.
-    Added connectivity diagnostics.
-    Added support for longitudinal and transverse channel configuration.
-    Added vector data export.
-    Added optional polygon generation from closed boundaries.
-    Initial QGIS graphical interface.
+tags=hydrology,drainage,mining,geotechnical engineering,DXF,CAD,topography,geoprocessing
+changelog=Version 0.2.3 - Added integer alerta_geom flag (0=without automatic warnings, 1=gap/offset warning), computed from the status field after geometry generation; no changes to sector geometry or export. Previous changes: Version 0.2.2 - Added assisted sector-generation workflow based on the recovered universal QGIS script. Optional SHP export of temporary sectors. Added revised preliminary sector construction using the previously tested transverse-to-channel method. Preserved CAD line export. Corrected optional DESCIDA selection default; added confirmation of DIVISOR and DESCIDA counts and mixed-orientation selection.

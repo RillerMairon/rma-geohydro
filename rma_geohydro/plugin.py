@@ -9,7 +9,7 @@ from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import (QAction, QDialog, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QComboBox, QFileDialog, QDoubleSpinBox,
-    QCheckBox, QTextEdit, QMessageBox, QFormLayout, QGroupBox)
+    QCheckBox, QTextEdit, QMessageBox, QFormLayout, QGroupBox, QInputDialog)
 from qgis.core import (QgsVectorLayer, QgsFeature, QgsGeometry, QgsField,
     QgsWkbTypes, QgsProject, QgsCoordinateReferenceSystem,
     QgsVectorFileWriter, QgsCoordinateTransformContext, QgsPointXY)
@@ -88,7 +88,7 @@ class DrainageDialog(QDialog):
     def __init__(self, iface, parent=None):
         super().__init__(parent)
         self.iface = iface
-        self.setWindowTitle('RMA GeoHydro | Drenagem de macicos (v0.1)')
+        self.setWindowTitle('RMA GeoHydro | Drenagem de macicos (v0.2.1 experimental)')
         self.resize(750, 680)
         layout = QVBoxLayout(self)
         headline = QLabel('RMA GeoHydro — preparacao e diagnostico de drenagem via DXF')
@@ -131,7 +131,8 @@ class DrainageDialog(QDialog):
 
         options = QFormLayout()
         self.orientation = QComboBox()
-        self.orientation.addItems(['Longitudinal', 'Transversal'])
+        self.orientation.addItems(['Ambas (longitudinal e transversal)', 'Longitudinal', 'Transversal'])
+        self.orientation.setToolTip('Escolha a configuração do projeto. A geometria segue o canal de referência e as transversais confirmadas, não o azimute norte/sul.')
         options.addRow('Orientacao principal', self.orientation)
         self.tolerance = QDoubleSpinBox()
         self.tolerance.setRange(0.001, 100000)
@@ -158,7 +159,11 @@ class DrainageDialog(QDialog):
         self.log.setPlaceholderText('O diagnostico sera exibido aqui.')
         layout.addWidget(self.log, 1)
         row = QHBoxLayout()
-        run = QPushButton('Analisar e exportar')
+        sectors = QPushButton('GERAR SETORES DE DRENAGEM (assistido)')
+        sectors.setToolTip('Delimitação preliminar por canal, divisores/descidas e limite opcional. Não substitui validação hidrológica.')
+        sectors.clicked.connect(self.execute_sectors)
+        row.addWidget(sectors)
+        run = QPushButton('Classificar linhas e exportar')
         run.clicked.connect(self.execute)
         row.addWidget(run)
         close = QPushButton('Fechar')
@@ -216,6 +221,29 @@ class DrainageDialog(QDialog):
             suggested = guess_column(names)
             if suggested:
                 self.field.setCurrentText(suggested)
+
+    def execute_sectors(self):
+        """Executa fluxo universal dos setores usando a lógica original validada visualmente."""
+        try:
+            from .setores_azul_universal import executar
+            caminho = self.path.text().strip()
+            epsg = self.crs.text().strip().upper()
+            if not caminho or not os.path.isfile(caminho):
+                self.browse_input()
+                caminho = self.path.text().strip()
+            if not epsg:
+                epsg, ok = QInputDialog.getText(self, 'SRC do desenho',
+                    'Informe o EPSG original do DXF:', text=QgsProject.instance().crs().authid())
+                if not ok: return
+            formato = 'SHP' if self.output_format.currentIndex() == 1 else 'GPKG'
+            quantidade = executar(caminho=caminho, epsg=epsg,
+                diretorio=self.output_dir.text().strip(), formato=formato,
+                orientacao=self.orientation.currentText())
+            if quantidade is not None:
+                self.msg('Setores preliminares gerados: {}'.format(quantidade))
+        except Exception as exc:
+            self.msg('Erro na delimitação dos setores: {}'.format(exc))
+            QMessageBox.warning(self, 'RMA GeoHydro', str(exc))
 
     def execute(self):
         self.log.clear()
