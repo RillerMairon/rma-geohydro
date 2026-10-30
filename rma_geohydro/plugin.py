@@ -8,7 +8,7 @@ from collections import Counter
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import (QAction, QDialog, QVBoxLayout, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QComboBox, QFileDialog, QDoubleSpinBox,
+    QLabel, QLineEdit, QPushButton, QComboBox, QDoubleSpinBox,
     QCheckBox, QTextEdit, QFormLayout, QGroupBox)
 from qgis.core import (QgsVectorLayer, QgsFeature, QgsGeometry, QgsField,
     QgsWkbTypes, QgsProject, QgsCoordinateReferenceSystem,
@@ -230,7 +230,7 @@ class DrainageDialog(QDialog):
             self._original_forms = []
             for form in self.findChildren(QFormLayout):
                 for i in range(form.rowCount()):
-                    item = form.itemAt(i, QFormLayout.LabelRole)
+                    item = form.itemAt(i, QFormLayout.ItemRole.LabelRole)
                     if item and item.widget() and isinstance(item.widget(), QLabel):
                         label = item.widget()
                         if not any(w is label for w, _, _ in self._original_ui):
