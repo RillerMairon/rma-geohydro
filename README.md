@@ -2,7 +2,7 @@
 
 **Open-Source QGIS Plugin for CAD/DXF Processing and Preliminary Surface Drainage Area Delineation**
 
-**Version:** 0.3.3 — Initial Stable Release Candidate  
+**Version:** 0.3.4 — REV1 | Stable Release Candidate  
 **Author:** Riller Mairon de Oliveira Alves  
 **License:** GNU General Public License v3.0  
 **Minimum QGIS Version:** 3.28  
@@ -30,7 +30,8 @@ The plugin is an independent project, with no affiliation to any specific compan
 - Simplified interface with collapsible advanced recognition settings.
 - Portuguese (Brazil) and English (US) interface options.
 - Language-specific output layer and export file names.
-- Shapefile and GeoPackage export options.
+- Shapefile and GeoPackage output options.
+- Direct access through the QGIS Plugins menu.
 - Diagnostic information to support engineering review.
 
 ## Multilingual Support
@@ -57,7 +58,7 @@ Examples include:
 
 Additional recognition keywords are accessible through the advanced settings.
 
-Some internal attribute values and secondary messages may remain untranslated in this release.
+Some internal attribute values and secondary technical messages may remain untranslated to preserve compatibility with existing workflows.
 
 ## Output Layers
 
@@ -96,7 +97,7 @@ A value of 0 does not indicate hydrological validation, geometric accuracy certi
 
 ### Option 1 — Official QGIS Plugin Repository
 
-Once version 0.3.3 has been approved and published in the official QGIS Plugin Repository:
+Once version 0.3.4 has been approved and published in the official QGIS Plugin Repository:
 
 1. Open QGIS.
 2. Navigate to **Plugins > Manage and Install Plugins**.
@@ -104,13 +105,13 @@ Once version 0.3.3 has been approved and published in the official QGIS Plugin R
 4. Select the available compatible version.
 5. Click **Install Plugin**.
 
-Until the non-experimental release is published, an earlier experimental version may still be available. In that case, enable **Show also experimental plugins** under Settings.
+Until the non-experimental release is approved and published, an earlier experimental version may remain available. In that case, enable **Show also experimental plugins** under Settings.
 
 Official plugin page: https://plugins.qgis.org/plugins/rma_geohydro/
 
 ### Option 2 — Manual Installation
 
-1. Download the version 0.3.3 ZIP package from GitHub Releases when published.
+1. Download the version 0.3.4 REV1 ZIP package from GitHub Releases once published.
 2. Open QGIS.
 3. Navigate to **Plugins > Manage and Install Plugins**.
 4. Select **Install from ZIP**.
@@ -163,6 +164,8 @@ Three channel gaps were reported, approximately 30.13 m, 22.96 m, and 92.43 m.
 
 Shapefile export was also successfully tested.
 
+Version 0.3.4 REV1 introduces targeted code-quality and Qt6 compatibility fixes. The complete regression tests and official validation results for this revision must be confirmed separately.
+
 These observations relate to the reference dataset and do not establish universal compatibility or hydrological correctness.
 
 ## Important Engineering Limitations
@@ -183,22 +186,35 @@ Generated polygons, offsets, gaps, boundaries, and drainage paths must be review
 
 ## Development Status
 
-Version 0.3.3 is intended as the first non-experimental release of RMA GeoHydro, following the experimental 0.2.x series.
+Version 0.3.4 REV1 is a non-experimental release candidate intended to address the remaining code-quality and Qt6 compatibility findings from version 0.3.3.
 
-The release includes interface internationalization, improved CAD layer recognition, and usability enhancements while retaining the existing preliminary geometric processing workflow.
+The plugin retains interface internationalization, bilingual CAD layer recognition, language-specific output names, and the preliminary geometric drainage area processing workflow.
 
-Testing with additional DXF datasets, QGIS versions, and operating environments remains important.
+Additional testing with different DXF datasets, QGIS versions, and operating environments remains important.
 
 Future development may include support for elevation-based topographic analysis, contour lines, digital elevation models, and improved drainage area delineation methods.
 
-These future features are not part of version 0.3.3.
+These future features are not part of version 0.3.4.
 
 ## Version History
 
-### v0.3.3 — Initial Stable Release Candidate
+### v0.3.4 — REV1 | Stability and Compatibility Maintenance
+
+- Fixed Flake8 F811 caused by a duplicate `QFileDialog` import.
+- Updated `QFormLayout.LabelRole` to `QFormLayout.ItemRole.LabelRole` to address a Qt6 compatibility warning.
+- Preserved direct access through the QGIS Plugins menu.
+- Maintained Portuguese (Brazil) and English (US) interface support.
+- Preserved bilingual CAD layer recognition and language-specific output names.
+- Maintained the preliminary drainage area generation workflow and the `alerta_geom` attribute.
+- No intentional changes to the geometric delineation algorithm.
+
+Official Flake8 and Qt6 results for this revision remain subject to repository validation.
+
+### v0.3.3 — Initial Non-Experimental Release
 
 - Added language-specific output layer and export file names.
 - Replaced previous drainage sector naming with preliminary drainage area terminology in the output layer names.
+- Added direct access through the QGIS Plugins menu.
 - Preserved the existing geometric processing workflow.
 - Maintained the `alerta_geom` attribute and geometric warning classification.
 - Confirmed consistent reference DXF results in Portuguese and English.
