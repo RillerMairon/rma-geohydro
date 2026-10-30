@@ -529,7 +529,7 @@ class RMAGeoHydroPlugin:
         self.action = QAction(icon, 'RMA GeoHydro', self.iface.mainWindow())
         self.action.triggered.connect(self.open_dialog)
         self.iface.addToolBarIcon(self.action)
-        self.iface.addPluginToMenu('&RMA GeoHydro', self.action)
+        self.iface.pluginMenu().addAction(self.action)
 
     def open_dialog(self):
         self.dialog = DrainageDialog(self.iface, self.iface.mainWindow())
@@ -538,4 +538,4 @@ class RMAGeoHydroPlugin:
     def unload(self):
         if self.action:
             self.iface.removeToolBarIcon(self.action)
-            self.iface.removePluginMenu('&RMA GeoHydro', self.action)
+            self.iface.pluginMenu().removeAction(self.action)
