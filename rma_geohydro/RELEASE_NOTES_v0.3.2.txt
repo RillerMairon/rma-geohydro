@@ -1,0 +1,8 @@
+RMA GeoHydro v0.3.2 — Stable candidate (not yet desktop validated)
+
+- Compact assisted CAD classification area with three automatically recognized categories.
+- Bilingual keyword lists remain editable through Advanced settings (collapsed by default).
+- Language switch updates labels and advanced controls.
+- CAD recognition and geometric generation functions preserved from v0.3.1.
+- experimental=False; publication requires functional verification and repository approval.
+- Technical outputs remain preliminary and require independent hydrological/topographic validation.

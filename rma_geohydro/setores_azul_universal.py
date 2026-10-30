@@ -11,7 +11,7 @@ from qgis.core import (QgsProject, QgsVectorLayer, QgsGeometry, QgsFeature, QgsF
                        QgsPointXY, QgsCoordinateReferenceSystem, QgsWkbTypes,
                        QgsFillSymbol, QgsLineSymbol, QgsUnitTypes)
 from qgis.PyQt.QtCore import QVariant
-from qgis.PyQt.QtWidgets import QInputDialog, QMessageBox, QFileDialog
+from .i18n import FileDialog as QFileDialog, InputDialog as QInputDialog, MessageBox as QMessageBox, tr, language
 LIMIAR_GAP_CANAL_M = 20.0
 LIMIAR_AFASTAMENTO_M = 10.0
 
@@ -193,7 +193,7 @@ def executar(caminho=None, epsg=None, diretorio=None, formato='SHP', orientacao=
         epsg, ok = QInputDialog.getText(None, 'SRC de origem', 'EPSG do DXF (por exemplo EPSG:32629):', text=projeto.crs().authid())
         if not ok: return None
     crs = QgsCoordinateReferenceSystem(epsg)
-    if not crs.isValid() or crs.isGeographic() or crs.mapUnits() != QgsUnitTypes.DistanceMeters:
+    if not crs.isValid() or crs.isGeographic() or crs.mapUnits() != QgsUnitTypes.DistanceUnit.DistanceMeters:
         raise ValueError('O SRC informado precisa ser projetado e em metros.')
     entidades = ler_lwpolylines_ascii_dxf(caminho)
     if not entidades:
@@ -223,22 +223,46 @@ def executar(caminho=None, epsg=None, diretorio=None, formato='SHP', orientacao=
     if QMessageBox.question(None, 'RMA GeoHydro - confirmar elementos',
             aviso + '\n\nOs setores serão construídos entre transversais consecutivas em relação ao canal selecionado. '
             'Isso não classifica hidraulicamente a orientação. Continuar?',
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) != QMessageBox.Yes:
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes) != QMessageBox.StandardButton.Yes:
         return None
     if len(barras) < 2 or not canais:
         raise ValueError('São necessários um canal e no mínimo duas linhas transversais.')
+    # Output names follow the selected UI language. Geometry and attribute schema stay unchanged.
+    output_names = (
+        {
+            'arrows': 'RMA_01_flow_arrows',
+            'divides': 'RMA_02_divides_downchutes',
+            'channels': 'RMA_03_channels',
+            'areas': 'RMA_04_PRELIMINARY_DRAINAGE_AREAS_REVIEW',
+            'export_areas': 'RMA_preliminary_drainage_areas',
+            'export_channels': 'RMA_channels',
+            'export_divides': 'RMA_divides_downchutes',
+            'export_arrows': 'RMA_flow_arrows',
+            'diagnostic': 'RMA_drainage_areas_diagnostic.txt',
+        } if language() == 'en_US' else {
+            'arrows': 'RMA_01_setas_fluxo',
+            'divides': 'RMA_02_divisores_descidas',
+            'channels': 'RMA_03_canais',
+            'areas': 'RMA_04_AREAS_DRENAGEM_PRELIMINARES_REVISAR',
+            'export_areas': 'RMA_areas_drenagem_preliminares',
+            'export_channels': 'RMA_canais',
+            'export_divides': 'RMA_divisores_descidas',
+            'export_arrows': 'RMA_setas',
+            'diagnostic': 'RMA_diagnostico_areas_drenagem.txt',
+        }
+    )
     # Camadas temporárias independentes; setores são apenas aproximações geométricas.
-    layer_setas = criar_memoria('RMA_01_setas_fluxo', 'Polygon', crs, [QgsField('cad_id', QVariant.String)])
+    layer_setas = criar_memoria(output_names['arrows'], 'Polygon', crs, [QgsField('cad_id', QVariant.String)])
     for ent in setas:
         g = poligono_seta(ent)
         if g and g.isGeosValid(): incluir(layer_setas, g, [ent['handle']])
     layer_setas.renderer().setSymbol(QgsFillSymbol.createSimple({'color':'38,112,203,255', 'outline_style':'no'}))
-    layer_barras = criar_memoria('RMA_02_divisores_descidas', 'LineString', crs, [QgsField('cad_id', QVariant.String), QgsField('tipo', QVariant.String)])
+    layer_barras = criar_memoria(output_names['divides'], 'LineString', crs, [QgsField('cad_id', QVariant.String), QgsField('tipo', QVariant.String)])
     for ent in barras:
         pts=xy_pts(ent)
         incluir(layer_barras, linha2(pts[0], pts[-1]), [ent['handle'], ent['layer']])
     layer_barras.renderer().setSymbol(QgsLineSymbol.createSimple({'line_color':'32,82,197,255', 'line_width':'0.65'}))
-    layer_canais = criar_memoria('RMA_03_canais', 'LineString', crs, [QgsField('cad_id', QVariant.String)])
+    layer_canais = criar_memoria(output_names['channels'], 'LineString', crs, [QgsField('cad_id', QVariant.String)])
     for ent in canais:
         incluir(layer_canais, QgsGeometry.fromPolylineXY([qpt(p) for p in xy_pts(ent)]), [ent['handle']])
     layer_canais.renderer().setSymbol(QgsLineSymbol.createSimple({'line_color':'0,170,215,255', 'line_width':'0.9'}))
@@ -258,7 +282,7 @@ def executar(caminho=None, epsg=None, diretorio=None, formato='SHP', orientacao=
             QgsField('fim',QVariant.String), QgsField('status',QVariant.String),
             QgsField('afast_m',QVariant.Double), QgsField('gap_m',QVariant.Double),
             QgsField('area_m2',QVariant.Double), QgsField('alerta_geom',QVariant.Int)]
-    layer_areas = criar_memoria('RMA_04_SETORES_PRELIMINARES_REVISAR','Polygon',crs,campos)
+    layer_areas = criar_memoria(output_names['areas'],'Polygon',crs,campos)
     rejeitados=[]
     for i,(t1,t2) in enumerate(zip(transectos[:-1],transectos[1:]),1):
         s1,_,fora1,d1,e1=t1
@@ -283,22 +307,22 @@ def executar(caminho=None, epsg=None, diretorio=None, formato='SHP', orientacao=
         lyr.updateExtents()
         if lyr.featureCount(): projeto.addMapLayer(lyr)
     resumo = ('DXF: {}\nCanal: {} ({} trechos)\nTransversais: {}\nSetas: {}\n'
-        'Orientação escolhida: {}\nDivisores: {} | Descidas: {}\nSetores preliminares: {}\nRejeitados: {}\nLacunas de canal (m): {}\n{}\n'
+        'Orientação escolhida: {}\nDivisores: {} | Descidas: {}\nÁreas de drenagem preliminares: {}\nRejeitados: {}\nLacunas de canal (m): {}\n{}\n'
         'ATENÇÃO: limites aproximados; NÃO usar para cálculos hidrológicos sem validação.').format(
         os.path.basename(caminho),nome_canal,len(canais),len(transectos),len(setas),
         orientacao,n_divisores,n_descidas,layer_areas.featureCount(),len(rejeitados),[round(x[2],2) for x in gaps], '\n'.join(rejeitados))
     print('RMA GeoHydro\n'+resumo)
     if diretorio and os.path.isdir(diretorio) and layer_areas.featureCount():
-        resp=QMessageBox.question(None,'Exportação de setores',
-            'Salvar os setores e camadas auxiliares como {} na pasta escolhida?'.format(formato),
-            QMessageBox.Yes|QMessageBox.No,QMessageBox.No)
-        if resp==QMessageBox.Yes:
+        resp=QMessageBox.question(None,'Exportação de áreas de drenagem',
+            'Salvar as áreas de drenagem e camadas auxiliares como {} na pasta escolhida?'.format(formato),
+            QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No,QMessageBox.StandardButton.No)
+        if resp==QMessageBox.StandardButton.Yes:
             from .plugin import write_layer
-            for lyr,nome in ((layer_areas,'RMA_setores_preliminares'),
-                             (layer_canais,'RMA_canais'),(layer_barras,'RMA_divisores_descidas'),
-                             (layer_setas,'RMA_setas')):
+            for lyr,nome in ((layer_areas,output_names['export_areas']),
+                             (layer_canais,output_names['export_channels']),(layer_barras,output_names['export_divides']),
+                             (layer_setas,output_names['export_arrows'])):
                 if lyr.featureCount(): write_layer(lyr,diretorio,nome,formato,projeto)
-            with open(os.path.join(diretorio,'RMA_diagnostico_setores.txt'),'w',encoding='utf-8') as f:
+            with open(os.path.join(diretorio,output_names['diagnostic']),'w',encoding='utf-8') as f:
                 f.write(resumo)
-    QMessageBox.information(None,'RMA GeoHydro - setores preliminares',resumo)
+    QMessageBox.information(None,'RMA GeoHydro - áreas de drenagem preliminares',resumo)
     return layer_areas.featureCount()

@@ -1,0 +1,8 @@
+RMA GeoHydro v0.3.3 — Candidate stable release
+
+- Output layer names reflect Portuguese or English interface language.
+- Export filenames reflect interface language.
+- Renamed Portuguese drainage polygons to preliminary drainage areas.
+- Kept alerta_geom attribute unchanged for backwards compatibility.
+- Did not modify drainage area geometry construction.
+- QGIS runtime testing required before publication.

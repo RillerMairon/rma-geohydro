@@ -17,7 +17,8 @@ from qgis.core import (
     QgsFillSymbol, QgsLineSymbol
 )
 from qgis.PyQt.QtCore import QVariant
-from qgis.PyQt.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+from .cad_keywords import CAD_KEYWORDS
+from .i18n import FileDialog as QFileDialog, InputDialog as QInputDialog, MessageBox as QMessageBox, tr
 
 # Alerta para lacunas entre trechos e afastamento das seções (metros).
 MAX_GAP_M = 20.0
@@ -35,9 +36,9 @@ def cancelar():
 def sim_nao(pergunta):
     resposta = QMessageBox.question(
         None, "Verificação do DXF", pergunta,
-        QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes
     )
-    return resposta == QMessageBox.Yes
+    return resposta == QMessageBox.StandardButton.Yes
 
 
 def escolher(titulo, pergunta, opcoes, obrigatorio=True):
@@ -257,7 +258,7 @@ def executar():
     nome_canal = escolher(
         "2/7 - Eixo de referência",
         "Qual camada CAD contém a linha longitudinal do CANAL de referência?",
-        sugerir_layer(todas, ["CANAL", "DREN", "PERIF", "EIXO"]))
+        sugerir_layer(todas, [p.upper() for p in CAD_KEYWORDS["canais"]]))
     tem_descidas = sim_nao("O DXF contém DESCIDAS DE ÁGUA em linhas/polilinhas?")
     tem_fluxo = sim_nao("O DXF contém SETAS / INDICAÇÕES DO SENTIDO DO FLUXO?")
 
@@ -265,7 +266,7 @@ def executar():
         "3/7 - Divisores",
         "Qual camada CAD contém os DIVISORES transversais?\n"
         "Se não houver, selecione '(não possui)'.",
-        ["(não possui)"] + sugerir_layer(todas, ["DIVIS", "SEPAR", "LIMITE"]),
+        ["(não possui)"] + sugerir_layer(todas, [p.upper() for p in CAD_KEYWORDS["divisores"]]),
         obrigatorio=False)
     if nome_div == "(não possui)":
         nome_div = None
@@ -274,14 +275,14 @@ def executar():
     if tem_descidas:
         nome_desc = escolher("4/7 - Descidas de água",
                             "Selecione a camada CAD das DESCIDAS:",
-                            sugerir_layer(todas, ["DESC", "QUEDA", "DOWN", "DREN"]))
+                            sugerir_layer(todas, [p.upper() for p in CAD_KEYWORDS["descidas"]]))
 
     nome_fluxo = None
     direcao = "não informada"
     if tem_fluxo:
         nome_fluxo = escolher("5/7 - Sentido do fluxo",
                              "Selecione a camada CAD das SETAS DE FLUXO:",
-                             sugerir_layer(todas, ["SENTIDO", "FLUXO", "SETA", "FLOW"]))
+                             sugerir_layer(todas, [p.upper() for p in CAD_KEYWORDS["fluxo"]]))
         direcao = escolher("5/7 - Direção de escoamento",
                           "Em relação à TELA do QGIS, para onde aponta o escoamento?\n"
                           "(Isso é registrado para conferência; não substitui análise de relevo.)",
@@ -297,7 +298,7 @@ def executar():
     if tem_limite:
         nome_limite = escolher("6/7 - Limite externo",
                               "Selecione a camada CAD que contém o LIMITE correto:",
-                              sugerir_layer(todas, ["LIMITE", "BORDA", "CRISTA", "OFFSET", "MARGEM"]))
+                              sugerir_layer(todas, [p.upper() for p in CAD_KEYWORDS["limite"]]))
 
     epsg_padrao = QgsProject.instance().crs().authid() or "EPSG:31983"
     epsg, ok = QInputDialog.getText(
@@ -307,7 +308,7 @@ def executar():
     if not ok:
         cancelar()
     crs = QgsCoordinateReferenceSystem(epsg.strip())
-    if not crs.isValid() or crs.mapUnits() != QgsUnitTypes.DistanceMeters:
+    if not crs.isValid() or crs.mapUnits() != QgsUnitTypes.DistanceUnit.DistanceMeters:
         raise RuntimeError("Escolha um SRC válido com unidades em metros. Nada foi alterado.")
 
     def filtrar(layer):
@@ -470,7 +471,7 @@ def executar():
                 opts.fileEncoding = "UTF-8"
                 resp = QgsVectorFileWriter.writeAsVectorFormatV3(
                     lyr, caminho_saida, projeto.transformContext(), opts)
-                if resp[0] != QgsVectorFileWriter.NoError:
+                if resp[0] != QgsVectorFileWriter.WriterError.NoError:
                     print("ERRO AO SALVAR", caminho_saida, resp)
                 else:
                     print("SHP salvo:", caminho_saida)

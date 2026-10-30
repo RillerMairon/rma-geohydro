@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""RMA GeoHydro - plugin QGIS 3.28+ (PyQGIS + PyQt5 only)."""
+"""RMA GeoHydro - plugin QGIS 3.28+ (qgis.PyQt compatibility imports)."""
 import os
 import re
 import math
@@ -9,11 +9,13 @@ from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import (QAction, QDialog, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QComboBox, QFileDialog, QDoubleSpinBox,
-    QCheckBox, QTextEdit, QMessageBox, QFormLayout, QGroupBox, QInputDialog)
+    QCheckBox, QTextEdit, QFormLayout, QGroupBox)
 from qgis.core import (QgsVectorLayer, QgsFeature, QgsGeometry, QgsField,
     QgsWkbTypes, QgsProject, QgsCoordinateReferenceSystem,
     QgsVectorFileWriter, QgsCoordinateTransformContext, QgsPointXY)
 from qgis.PyQt.QtCore import QVariant
+from .cad_keywords import default_aliases, normalize_cad_name, contains_alias
+from .i18n import FileDialog as QFileDialog, InputDialog as QInputDialog, MessageBox as QMessageBox, tr, language, set_language
 
 CATEGORY = {
     'divisores': 'Divisores topograficos',
@@ -43,12 +45,12 @@ def line_parts(geom):
     if not geom or geom.isEmpty():
         return []
     try:
-        if geom.type() == QgsWkbTypes.LineGeometry:
+        if geom.type() == QgsWkbTypes.GeometryType.LineGeometry:
             if geom.isMultipart():
                 return [[QgsPointXY(p) for p in part] for part in geom.asMultiPolyline() if len(part) >= 2]
             part = geom.asPolyline()
             return [[QgsPointXY(p) for p in part]] if len(part) >= 2 else []
-        if geom.isMultipart() and QgsWkbTypes.flatType(geom.wkbType()) == QgsWkbTypes.GeometryCollection:
+        if geom.isMultipart() and QgsWkbTypes.flatType(geom.wkbType()) == QgsWkbTypes.Type.GeometryCollection:
             out = []
             for part in geom.asGeometryCollection():
                 out.extend(line_parts(part))
@@ -67,7 +69,7 @@ def write_layer(layer, directory, basename, fmt, project):
     options.layerName = basename
     if os.path.exists(path):
         if fmt == 'GPKG':
-            options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteFile
+            options.actionOnExistingFile = QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile
         else:
             # Delete sidecars safely via provider (not by overwriting a locked loaded layer).
             old = QgsVectorLayer(path, basename, 'ogr')
@@ -75,7 +77,7 @@ def write_layer(layer, directory, basename, fmt, project):
                 QgsVectorFileWriter.deleteShapeFile(path)
     result = QgsVectorFileWriter.writeAsVectorFormatV3(
         layer, path, project.transformContext(), options)
-    if result[0] != QgsVectorFileWriter.NoError:
+    if result[0] != QgsVectorFileWriter.WriterError.NoError:
         raise RuntimeError('Falha ao salvar {}: {}'.format(path, result[1]))
     output = QgsVectorLayer(path, basename, 'ogr')
     if not output.isValid():
@@ -88,9 +90,19 @@ class DrainageDialog(QDialog):
     def __init__(self, iface, parent=None):
         super().__init__(parent)
         self.iface = iface
-        self.setWindowTitle('RMA GeoHydro | Drenagem de macicos (v0.2.1 experimental)')
+        self.setWindowTitle('RMA GeoHydro | Áreas de drenagem preliminares (v0.3.3)')
         self.resize(750, 680)
         layout = QVBoxLayout(self)
+        lang_row = QHBoxLayout()
+        lang_row.addWidget(QLabel('Idioma / Language:'))
+        self.language_select = QComboBox()
+        self.language_select.addItem('Português (Brasil)', 'pt_BR')
+        self.language_select.addItem('English (US)', 'en_US')
+        self.language_select.setCurrentIndex(1 if language() == 'en_US' else 0)
+        lang_row.addWidget(self.language_select)
+        lang_row.addStretch()
+        layout.addLayout(lang_row)
+        self.language_select.currentIndexChanged.connect(self.change_language)
         headline = QLabel('RMA GeoHydro — preparacao e diagnostico de drenagem via DXF')
         headline.setStyleSheet('font-size: 15px; font-weight: bold;')
         layout.addWidget(headline)
@@ -118,15 +130,35 @@ class DrainageDialog(QDialog):
         layout.addLayout(form)
 
         group = QGroupBox('Classificacao assistida por nomes de layers CAD')
-        gf = QFormLayout(group)
+        group_layout = QVBoxLayout(group)
+        # A compact summary is always displayed. Full matching aliases are hidden
+        # by default; QLineEdit values remain the single source of truth for processing.
+        summary = QFormLayout()
+        self.summary_labels = {}
+        for key in CATEGORY:
+            label = QLabel('Reconhecimento automatico (PT/EN)')
+            label.setToolTip('Correspondencia por nomes de camadas CAD em portugues e ingles. Confira os resultados antes do uso.')
+            summary.addRow(CATEGORY[key], label)
+            self.summary_labels[key] = label
+        group_layout.addLayout(summary)
+        self.advanced_toggle = QPushButton('Configuracoes avancadas')
+        self.advanced_toggle.setCheckable(True)
+        self.advanced_toggle.setChecked(False)
+        group_layout.addWidget(self.advanced_toggle)
+        self.advanced_group = QGroupBox('Palavras-chave de reconhecimento CAD (editaveis)')
+        self.advanced_group.setVisible(False)
+        advanced_form = QFormLayout(self.advanced_group)
         self.kw = {}
-        for key, value in [('divisores', 'divisor,crista,topografico,div_top'),
-                           ('canais', 'canal,canaleta,channel'),
-                           ('descidas', 'descida,downchute,down_chute')]:
+        self._default_keywords = {}
+        for key in CATEGORY:
+            value = default_aliases(key, language())
             edit = QLineEdit(value)
             edit.setToolTip('Separe termos por virgula; correspondencia parcial sem diferenciar acentos.')
             self.kw[key] = edit
-            gf.addRow(CATEGORY[key], edit)
+            self._default_keywords[key] = value
+            advanced_form.addRow(CATEGORY[key], edit)
+        group_layout.addWidget(self.advanced_group)
+        self.advanced_toggle.toggled.connect(self._toggle_advanced)
         layout.addWidget(group)
 
         options = QFormLayout()
@@ -159,7 +191,7 @@ class DrainageDialog(QDialog):
         self.log.setPlaceholderText('O diagnostico sera exibido aqui.')
         layout.addWidget(self.log, 1)
         row = QHBoxLayout()
-        sectors = QPushButton('GERAR SETORES DE DRENAGEM (assistido)')
+        sectors = QPushButton('GERAR ÁREAS DE DRENAGEM PRELIMINARES (assistido)')
         sectors.setToolTip('Delimitação preliminar por canal, divisores/descidas e limite opcional. Não substitui validação hidrológica.')
         sectors.clicked.connect(self.execute_sectors)
         row.addWidget(sectors)
@@ -171,9 +203,66 @@ class DrainageDialog(QDialog):
         row.addWidget(close)
         layout.addLayout(row)
         self.source_name.currentIndexChanged.connect(self.update_fields)
+        self.localize_ui()
+
+    def _toggle_advanced(self, enabled):
+        self.advanced_group.setVisible(enabled)
+        if enabled:
+            self.advanced_toggle.setText(tr('Ocultar configuracoes avancadas'))
+        else:
+            self.advanced_toggle.setText(tr('Configuracoes avancadas'))
+        self.adjustSize()
+
+    def change_language(self, *_):
+        set_language(self.language_select.currentData())
+        # Reopen the form to refresh labels; preserve the entered file path and settings
+        # in the current session rather than clearing them unexpectedly.
+        self.localize_ui()
+
+    def localize_ui(self):
+        # Preserve originals to support switching languages in either direction.
+        from qgis.PyQt.QtWidgets import QLabel, QPushButton, QGroupBox, QCheckBox
+        if not hasattr(self, '_original_ui'):
+            self._original_ui = []
+            for widget in (self.findChildren(QLabel) + self.findChildren(QPushButton) + self.findChildren(QGroupBox) + self.findChildren(QCheckBox)):
+                self._original_ui.append((widget, widget.text() if hasattr(widget, 'text') else widget.title(),
+                    widget.toolTip()))
+            self._original_forms = []
+            for form in self.findChildren(QFormLayout):
+                for i in range(form.rowCount()):
+                    item = form.itemAt(i, QFormLayout.LabelRole)
+                    if item and item.widget() and isinstance(item.widget(), QLabel):
+                        label = item.widget()
+                        if not any(w is label for w, _, _ in self._original_ui):
+                            self._original_ui.append((label, label.text(), label.toolTip()))
+            self._original_placeholders = [(w,w.placeholderText()) for w in
+                [self.path, self.crs, self.log]]
+            self._original_orientation = [self.orientation.itemText(i) for i in range(self.orientation.count())]
+            self._original_suffix = self.tolerance.suffix()
+        for widget, original, original_tip in self._original_ui:
+            if isinstance(widget, QGroupBox): widget.setTitle(tr(original))
+            elif hasattr(widget, 'setText'): widget.setText(tr(original))
+            widget.setToolTip(tr(original_tip))
+        for widget, original in self._original_placeholders:
+            widget.setPlaceholderText(tr(original))
+        selected = self.orientation.currentIndex()
+        for i, original in enumerate(self._original_orientation):
+            self.orientation.setItemText(i, tr(original))
+        self.orientation.setCurrentIndex(selected)
+        self.tolerance.setSuffix(tr(self._original_suffix))
+        # Display aliases in the selected language order without removing
+        # international matches or overwriting user-customized keywords.
+        for key, widget in self.kw.items():
+            old_default = self._default_keywords[key]
+            if widget.text() == old_default:
+                new_default = default_aliases(key, language())
+                widget.setText(new_default)
+                self._default_keywords[key] = new_default
+        self._toggle_advanced(self.advanced_toggle.isChecked())
+        self.setWindowTitle('RMA GeoHydro | ' + ('Preliminary drainage areas' if language() == 'en_US' else 'Áreas de drenagem preliminares') + ' (v0.3.3)')
 
     def msg(self, message):
-        self.log.append(str(message))
+        self.log.append(tr(str(message)))
 
     def browse_input(self):
         path, _ = QFileDialog.getOpenFileName(self, 'Selecionar DXF', '', 'DXF (*.dxf)')
@@ -197,7 +286,7 @@ class DrainageDialog(QDialog):
                       ('Entities', file_path + '|layername=Entities')]
         for label, uri in candidates:
             layer = QgsVectorLayer(uri, label, 'ogr')
-            if layer.isValid() and layer.featureCount() > 0 and layer.geometryType() == QgsWkbTypes.LineGeometry:
+            if layer.isValid() and layer.featureCount() > 0 and layer.geometryType() == QgsWkbTypes.GeometryType.LineGeometry:
                 self.source_name.addItem(label, uri)
         if self.source_name.count() == 0:
             # DXF providers may report Unknown/Collection for mixed CAD entities.
@@ -222,6 +311,9 @@ class DrainageDialog(QDialog):
             if suggested:
                 self.field.setCurrentText(suggested)
 
+    def _orientation_value(self):
+        return ('Ambas', 'Longitudinal', 'Transversal')[self.orientation.currentIndex()]
+
     def execute_sectors(self):
         """Executa fluxo universal dos setores usando a lógica original validada visualmente."""
         try:
@@ -238,9 +330,9 @@ class DrainageDialog(QDialog):
             formato = 'SHP' if self.output_format.currentIndex() == 1 else 'GPKG'
             quantidade = executar(caminho=caminho, epsg=epsg,
                 diretorio=self.output_dir.text().strip(), formato=formato,
-                orientacao=self.orientation.currentText())
+                orientacao=self._orientation_value())
             if quantidade is not None:
-                self.msg('Setores preliminares gerados: {}'.format(quantidade))
+                self.msg('Áreas de drenagem preliminares geradas: {}'.format(quantidade))
         except Exception as exc:
             self.msg('Erro na delimitação dos setores: {}'.format(exc))
             QMessageBox.warning(self, 'RMA GeoHydro', str(exc))
@@ -281,9 +373,9 @@ class DrainageDialog(QDialog):
         if source_crs.isGeographic():
             raise ValueError('SRC em graus. Utilize um SRC projetado, preferencialmente UTM em metros.')
         # Units must be meters for meaningful network-tolerance reporting.
-        if source_crs.mapUnits() != 0:  # QgsUnitTypes.DistanceMeters is 0 on QGIS 3.x.
+        if source_crs.mapUnits() != 0:  # Metric map units are required for distance-based operations.
             from qgis.core import QgsUnitTypes
-            if source_crs.mapUnits() != QgsUnitTypes.DistanceMeters:
+            if source_crs.mapUnits() != QgsUnitTypes.DistanceUnit.DistanceMeters:
                 raise ValueError('SRC nao esta em metros. Reprojete o desenho antes de processar.')
         directory = self.output_dir.text().strip()
         if not directory or not os.path.isdir(directory):
@@ -309,7 +401,7 @@ class DrainageDialog(QDialog):
         for feature in layer.getFeatures():
             cad_layer = str(feature[field] or '')
             v = normalize(cad_layer)
-            matches = [k for k, keywords in terms.items() if any(word in v for word in keywords)]
+            matches = [k for k, keywords in terms.items() if contains_alias(v, keywords)]
             if not matches:
                 unmatched[cad_layer] += 1
                 continue
@@ -337,7 +429,7 @@ class DrainageDialog(QDialog):
         for out in mem.values():
             out.updateExtents()
         self.msg('Fonte: {}'.format(path))
-        self.msg('SRC: {} | Orientacao declarada: {}'.format(source_crs.authid(), self.orientation.currentText()))
+        self.msg('SRC: {} | Orientacao declarada: {}'.format(source_crs.authid(), self._orientation_value()))
         self.msg('IMPORTANTE: orientacao e um metadado operacional; esta versao NAO altera automaticamente a geometria pelo sentido do canal.')
         self.msg('Entidades lineares classificadas: {}'.format(sum(counts[k] for k in CATEGORY)))
         for key in CATEGORY:
@@ -391,14 +483,14 @@ class DrainageDialog(QDialog):
                 poly = QgsGeometry.polygonize(polygon_lines)
                 polygons = []
                 if poly and not poly.isEmpty():
-                    if poly.type() == QgsWkbTypes.PolygonGeometry:
+                    if poly.type() == QgsWkbTypes.GeometryType.PolygonGeometry:
                         if poly.isMultipart():
                             polygons = [QgsGeometry.fromPolygonXY(p) for p in poly.asMultiPolygon()]
                         else:
                             polygons = [QgsGeometry.fromPolygonXY(poly.asPolygon())]
                     else:
                         for g in poly.asGeometryCollection():
-                            if g.type() == QgsWkbTypes.PolygonGeometry:
+                            if g.type() == QgsWkbTypes.GeometryType.PolygonGeometry:
                                 polygons.extend([QgsGeometry.fromPolygonXY(p) for p in g.asMultiPolygon()] if g.isMultipart() else [g])
                 if polygons:
                     out_poly = QgsVectorLayer('Polygon?crs=' + source_crs.authid(), 'RMA_areas_fechadas', 'memory')
@@ -441,7 +533,7 @@ class RMAGeoHydroPlugin:
 
     def open_dialog(self):
         self.dialog = DrainageDialog(self.iface, self.iface.mainWindow())
-        self.dialog.exec_()
+        self.dialog.exec()
 
     def unload(self):
         if self.action:

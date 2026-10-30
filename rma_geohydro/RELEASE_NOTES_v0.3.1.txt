@@ -1,0 +1,9 @@
+RMA GeoHydro v0.3.1 — International CAD nomenclature update (stable candidate)
+- Expanded assisted CAD layer keyword aliases with English and Portuguese names.
+- English-first hints in English (US), Portuguese-first hints in Portuguese (Brazil).
+- Recognition stays bilingual regardless of selected interface language.
+- Manual edits to keyword lists are preserved when the interface language changes.
+- Expanded engineering layer suggestions in assisted area delineation.
+- No intentional changes to geometric sector/area generation or alerta_geom field.
+- This is a candidate for stable release; functional and translation tests remain required.
+- Algorithmic results are preliminary and require independent technical review.

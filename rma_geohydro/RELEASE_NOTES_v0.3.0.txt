@@ -1,0 +1,10 @@
+RMA GeoHydro v0.3.0 — Initial stable candidate
+
+- Set experimental=False for a proposed non-experimental initial release.
+- Added interface language selector (pt_BR and en_US) and persisted preference.
+- Applied glossary-based preferred terms: Embankment; Peripheral Channel; Drainage Channel; Downchute; Water Divide / Topographic Divide.
+- Describes output as preliminary drainage areas, not validated catchments.
+- Preserved output layer names and field schemas (including setor and alerta_geom), geometrical method and defaults for backward compatibility.
+- Retained Qt6-readiness enum fixes from 0.2.5.
+- Known limitation: some secondary diagnostic strings and legacy wizard prompts remain Portuguese in English mode; should be completed before public stable listing.
+- Local Python compile checks only; QGIS integration, test DXFs, and upstream quality reports still required.
